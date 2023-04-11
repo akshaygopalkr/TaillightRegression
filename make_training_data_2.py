@@ -99,14 +99,36 @@ def make_cropped_internal(annotations, index, directory):
     bot_right_y = min(translated_keypoint_y + 64, cropped_image.shape[0])
     padding_bottom = max(translated_keypoint_y + 64 - cropped_image.shape[0], 0)
 
-    cropped_internal = deepcopy(cropped_image[int(top_left_y):int(bot_right_y), int(top_left_x): int(bot_right_x)])
+    # cropped_internal = deepcopy(cropped_image[int(top_left_y):int(bot_right_y), int(top_left_x): int(bot_right_x)])
 
     # Padded image with internal centered in image
-    padded_image = cv2.copyMakeBorder(cropped_internal, padding_top, padding_bottom, padding_left, padding_right,
-                                      cv2.BORDER_CONSTANT, None, [0, 0, 0])
+    # padded_image = cv2.copyMakeBorder(cropped_internal, padding_top, padding_bottom, padding_left, padding_right,
+    #                                   cv2.BORDER_CONSTANT, None, [0, 0, 0])
+
+    radius = 5
+
+    # target_1 = (int(64 + keypoints[0] - center_x), int(64 + keypoints[1] - center_y))
+    # target_2 = (int(64 + keypoints[3] - center_x), int(64 + keypoints[4] - center_y))
+    # target_3 = (int(64 + keypoints[6] - center_x), int(64 + keypoints[7] - center_y))
+    # target_4 = (int(64 + keypoints[9] - center_x), int(64 + keypoints[10] - center_y))
+
+    cropped_internal = deepcopy(matching_image[max(int(center_y)-64, 0):min(int(center_y)+64, matching_image.shape[0]),
+                                max(int(center_x)-64,0): min(int(center_x)+64, matching_image.shape[1])])
+    print(cropped_internal.shape)
+    # cropped_internal = cv2.circle(cropped_internal, (64,64), radius, (0,0,255), -1)
+    # cv2.circle(padded_image, (64,64), radius, (0,0,255), -1)
+    # cv2.rectangle(matching_image, (bbox[0], bbox[1]), (bbox[0] + bbox[2], bbox[1] + bbox[3]), color=(0, 0, 255),
+    #               thickness=15
+    #               )
+    # cv2.circle(cropped_image, (translated_keypoint_x, translated_keypoint_y), radius, (0,0,255), -1)
+    # resize_matching_image = cv2.resize(matching_image, (1024, 1024))
+    # cv2.imshow('Cropped image', padded_image)
+    # cv2.imshow('Full image', resize_matching_image)
+    # cv2.imshow('Vehicle image', cropped_image)
+    # cv2.imshow('Cropped vehicle internal', cropped_internal)
 
     # Get the reflected version of the image
-    reflected_image, reflected_keypoints = reflect_image_and_keypoints(padded_image, keypoints)
+    # reflected_image, reflected_keypoints = reflect_image_and_keypoints(padded_image, keypoints)
     # print(reflected_keypoints)
     # print(keypoints)
     #
@@ -127,18 +149,18 @@ def make_cropped_internal(annotations, index, directory):
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
 
-    new_annotation = deepcopy(annotation)
-    new_annotation['image_id'] = str(annotation['image_id']) + '_rot_'
-    new_annotation['keypoints'] = reflected_keypoints
-    new_annotations.append(new_annotation)
-    cv2.imwrite(os.path.join('cropped-internal-data', directory, str(new_annotation['image_id']) + '.jpg'),
-                reflected_image)
-    print('Saved image ' + str(index) + ' to ' + os.path.join('cropped-internal-data', directory,
-                                                              str(new_annotation['image_id']) + '.jpg'))
+    # new_annotation = deepcopy(annotation)
+    # new_annotation['image_id'] = str(annotation['image_id']) + '_rot_'
+    # new_annotation['keypoints'] = reflected_keypoints
+    # new_annotations.append(new_annotation)
+    # cv2.imwrite(os.path.join('cropped-internal-data', directory, str(new_annotation['image_id']) + '.jpg'),
+    #             reflected_image)
+    # print('Saved image ' + str(index) + ' to ' + os.path.join('cropped-internal-data', directory,
+    #                                                           str(new_annotation['image_id']) + '.jpg'))
 
     # Save the image to the corresponding directory
     cv2.imwrite(os.path.join('cropped-internal-data', directory, str(annotation['image_id']) + '.jpg'),
-                padded_image)
+                cropped_internal)
     new_annotations.append(annotation)
     print('Saved image ' + str(index) + ' to ' + os.path.join('cropped-internal-data', directory,
                                                              str(annotation['image_id']) + '.jpg'))

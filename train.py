@@ -292,7 +292,7 @@ def params():
     parser.add_argument("--regression-regularizer", default=64, type=int)
     parser.add_argument("--batch-size", default=512, type=int,
                         help="Batch size per GPU/CPU for training and evaluation.")
-    parser.add_argument("--weight-decay", default=1e-4, type=float,
+    parser.add_argument("--weight-decay", default=2e-4, type=float,
                         help="L2 Regularization")
     parser.add_argument("--epochs", default=10,  type=int,
                         help="Number of epochs to train for")
@@ -334,24 +334,26 @@ if __name__ == '__main__':
 
     # Initialize the datasets and dataloader
     train_dataset = TaillightDataset(
-        json_file=os.path.join('data-apollocar3d', 'annotations', 'reflect_keypoints_train.json'),
-        img_dir=os.path.join('cropped-internal-data', 'train_reflect'),
+        json_file=os.path.join('data-apollocar3d', 'annotations', 'vcrop_keypoints_train.json'),
+        img_dir=os.path.join('cropped-internal-data', 'train_vehicle_crop'),
         regularizer=args.regression_regularizer,
         transform=transforms.Compose([
             transforms.Resize((128, 128))
         ])
     )
+
     val_dataset = TaillightDataset(
-        json_file=os.path.join('data-apollocar3d', 'annotations', 'reflect_keypoints_val.json'),
-        img_dir=os.path.join('cropped-internal-data', 'val_reflect'),
+        json_file=os.path.join('data-apollocar3d', 'annotations', 'vcrop_keypoints_val.json'),
+        img_dir=os.path.join('cropped-internal-data', 'val_vehicle_crop'),
         regularizer=args.regression_regularizer,
         transform=transforms.Compose([
             transforms.Resize((128, 128)),
         ])
     )
+
     test_dataset = TaillightDataset(
-        json_file=os.path.join('data-apollocar3d', 'annotations', 'reflect_keypoints_test.json'),
-        img_dir=os.path.join('cropped-internal-data', 'test_reflect'),
+        json_file=os.path.join('data-apollocar3d', 'annotations', 'vcrop_keypoints_test.json'),
+        img_dir=os.path.join('cropped-internal-data', 'test_vehicle_crop'),
         regularizer=args.regression_regularizer,
         transform=transforms.Compose([
             transforms.Resize((128, 128))
