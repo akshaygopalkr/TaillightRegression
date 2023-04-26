@@ -22,18 +22,16 @@ from torchvision import transforms
 from torch.utils.data import DataLoader
 import statistics
 import matplotlib.pyplot as plt
-import pdb
 import cv2
 
 
-def save_model(file_folder, model):
-
+def save_model(file_folder, model, type):
     # Save the model into the designated folder
-    path = os.path.join(file_folder, timestr + '.pth')
+    path = os.path.join(file_folder, timestr + '_' + type + '.pth')
     torch.save(model, path)
 
 
-def show_results(outputs, targets, inputs, start_index):
+def show_results(outputs, targets, inputs, start_index, light_type):
     img_idx = start_index
     if not os.path.isdir(os.path.join('results', timestr)):
         os.system('mkdir ' + os.path.join('results', timestr))
@@ -86,11 +84,12 @@ def show_results(outputs, targets, inputs, start_index):
         cv2.line(image, target_c2, target_c4, (0, 255, 0), 1)
         cv2.line(image, target_c3, target_c4, (0, 255, 0), 1)
 
-        cv2.imwrite(os.path.join('results', timestr, str(img_idx) + '.png'), image)
+        cv2.imwrite(os.path.join('results', timestr, light_type + str(img_idx) + '.png'), image)
         img_idx += 1
 
 
 def compute_loss(outputs, targets):
+
     # Reshape the outputs and targets from N x 8 to N x 4 x 2
     outputs = outputs.reshape((outputs.shape[0], 4, 2))
     targets = targets.reshape((targets.shape[0], 4, 2))
@@ -108,6 +107,7 @@ def compute_loss(outputs, targets):
 
 
 def compute_average_distance(outputs, targets):
+
     # Reshape the outputs and targets from N x 8 to N x 4 x 2
     outputs = outputs.reshape((outputs.shape[0], 4, 2))
     targets = targets.reshape((targets.shape[0], 4, 2))
@@ -151,19 +151,17 @@ def compute_percent_error(outputs, targets):
         height = max(y_corners) - min(y_corners)
         width = max(x_corners) - min(x_corners)
 
-        max_distance = (height**2 + width**2)**0.5
+        max_distance = (height ** 2 + width ** 2) ** 0.5
         distances.append(max_distance)
-
 
     distances = torch.tensor(distances).reshape(outputs.shape[0], 1).cuda()
     regularizer_mask = torch.max(torch.sum(mask, dim=1)[:, 0], torch.tensor(1.)).float()
 
     return torch.mean(torch.sum(64 * torch.sqrt(torch.sum((outputs * mask - targets) ** 2, dim=2)) / distances,
-                         dim=1) / regularizer_mask).item()
+                                dim=1) / regularizer_mask).item()
 
 
-
-def validate_model(val_loader, model, save_results=False):
+def validate_model(val_loader, model, save_results=False, light_type=None):
     """
     Evaluates the model on a given dataset
     """
@@ -184,22 +182,21 @@ def validate_model(val_loader, model, save_results=False):
         outputs = model(inputs)
 
         if save_results:
-            show_results(outputs, labels, inputs, (num_batches - 1) * args.batch_size)
+            show_results(outputs, labels, inputs, (num_batches - 1) * args.batch_size, light_type)
 
         loss = compute_loss(outputs, labels)
         running_distance += compute_average_distance(outputs, labels).item()
         running_error += compute_percent_error(outputs, labels)
-        loss.backward()
         losses += loss.item()
 
     avg_loss = losses / num_batches
     avg_distance = running_distance / num_batches
-    avg_error = 100*running_error / num_batches
+    avg_error = 100 * running_error / num_batches
 
     return avg_loss, avg_distance, avg_error
 
 
-def train(model, train_loader, val_loader, args):
+def train(model, train_loader, val_loader, args, type):
     """
     Performs training without SWA
     :param train_loader: training dataset
@@ -258,17 +255,17 @@ def train(model, train_loader, val_loader, args):
 
         avg_loss = losses / num_batches
         avg_distance = running_distance / num_batches
-        avg_error = 100*running_error / num_batches
+        avg_error = 100 * running_error / num_batches
         val_loss, val_distance, val_error = validate_model(val_loader, model)
         print()
-        print('----------------------------  Epoch ' + str(epoch_count + 1) + ' ----------------------------')
+        print('Epoch ' + str(epoch_count + 1) + ':')
         print('Training Loss: ' + str(avg_loss))
         print('Training Average Distance: ' + str(avg_distance))
         print('Training Average % Error: ' + str(avg_error))
         print('Validation Loss: ' + str(val_loss))
         print('Validation Average Distance ' + str(val_distance))
         print('Validation Average % Error: ' + str(val_error))
-        print('------------------------------------------------------------------')
+        print()
 
         # Update the model if it achieves a higher
         # accuracy then the previous model
@@ -285,12 +282,12 @@ def train(model, train_loader, val_loader, args):
         best_training_error = avg_error if best_training_error is None else min(best_training_error, avg_error)
 
     # Save the best model from training
-    save_model('models', best_model)
+    save_model('models', best_model, type)
     return best_training_loss, best_val_loss, best_training_distance, best_validation_distance, best_training_error, \
         best_validation_error
 
 
-def save_experiment(args, statistics):
+def save_experiment(args, statistics, model_type):
     """
     Saves the experiment results to a csv
     :param args: The hyperparameters used
@@ -314,13 +311,15 @@ def save_experiment(args, statistics):
         'Minimum Testing % Error:': [statistics[8]]
     }
 
+    file_name = 'results_' + model_type + '.csv'
+
     trial_dict = pd.DataFrame(trial_dict)
-    need_header = not os.path.exists('results2.csv')
+    need_header = not os.path.exists(file_name)
 
     if need_header:
-        trial_dict.to_csv('results2.csv', index=False, header=need_header)
+        trial_dict.to_csv(file_name, index=False, header=need_header)
     else:
-        trial_dict.to_csv('results2.csv', mode='a', index=False, header=need_header)
+        trial_dict.to_csv(file_name, mode='a', index=False, header=need_header)
 
 
 def params():
@@ -332,15 +331,15 @@ def params():
     parser.add_argument("--learning-rate", default=1e-3, type=float,
                         help="Model learning rate starting point.")
     parser.add_argument("--regression-regularizer", default=64, type=int)
-    parser.add_argument("--batch-size", default=512, type=int,
+    parser.add_argument("--batch-size", default=256, type=int,
                         help="Batch size per GPU/CPU for training and evaluation.")
-    parser.add_argument("--weight-decay", default=1e-4, type=float,
+    parser.add_argument("--weight-decay", default=1.5e-4, type=float,
                         help="L2 Regularization")
-    parser.add_argument("--epochs", default=5,  type=int,
+    parser.add_argument("--epochs", default=25, type=int,
                         help="Number of epochs to train for")
     parser.add_argument('--model-type', type=str,
                         choices=['resnet18', 'resnet34', 'resnet50', 'resnet101',
-                                 'densenet121', 'densenet169'], default='densenet121')
+                                 'densenet121', 'densenet169'], default='resnet50')
     parser.add_argument('--image-padding', type=int, default=64)
     args = parser.parse_args()
 
@@ -367,57 +366,87 @@ def params():
 
 if __name__ == '__main__':
 
-    args, model = params()
     timestr = time.strftime("%Y%m%d-%H%M%S")
 
-    # Put model on GPU
-    if torch.cuda.is_available():
-        model = model.cuda()
+    train_json_list = ['keypoints_vcrop_left_rear_train.json', 'keypoints_vcrop_right_rear_train.json',
+                       'keypoints_vcrop_left_front_train.json', 'keypoints_vcrop_right_front_train.json']
+    val_json_list = ['keypoints_vcrop_left_rear_val.json', 'keypoints_vcrop_right_rear_val.json',
+                     'keypoints_vcrop_left_front_val.json', 'keypoints_vcrop_right_front_val.json']
+    test_json_list = ['keypoints_vcrop_left_rear_test.json', 'keypoints_vcrop_right_rear_test.json',
+                      'keypoints_vcrop_left_front_test.json', 'keypoints_vcrop_right_front_test.json']
 
-    # Initialize the datasets and dataloader
-    train_dataset = TaillightDataset(
-        json_file=os.path.join('data-apollocar3d', 'annotations', 'separate_lights', 'keypoints_vcrop_left_rear_train.json'),
-        img_dir=os.path.join('cropped-internal-data', 'separate_lights', 'train_left_rear'),
-        regularizer=args.regression_regularizer,
-        transform=transforms.Compose([
-            transforms.Resize((128, 128))
-        ])
-    )
+    train_img_dir = ['train_left_rear', 'train_right_rear', 'train_left_front', 'train_right_front']
+    val_img_dir = ['val_left_rear', 'val_right_rear', 'val_left_front', 'val_right_front']
+    test_img_dir = ['test_left_rear', 'test_right_rear', 'test_left_front', 'test_right_front']
 
-    val_dataset = TaillightDataset(
-        json_file=os.path.join('data-apollocar3d', 'annotations', 'separate_lights', 'keypoints_vcrop_left_rear_val.json'),
-        img_dir=os.path.join('cropped-internal-data', 'val_left_rear'),
-        regularizer=args.regression_regularizer,
-        transform=transforms.Compose([
-            transforms.Resize((128, 128)),
-        ])
-    )
+    light_type = ['Left_Rear', 'Right_Rear', 'Left_Front', 'Right_Front']
 
-    test_dataset = TaillightDataset(
-        json_file=os.path.join('data-apollocar3d', 'annotations', 'separate_lights', 'keypoints_vcrop_left_rear_test.json'),
-        img_dir=os.path.join('cropped-internal-data', 'test_left_rear'),
-        regularizer=args.regression_regularizer,
-        transform=transforms.Compose([
-            transforms.Resize((128, 128))
-        ])
-    )
+    full_statistics = [0]*9
 
-    train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+    for train_json, val_json, test_json, train_dir, val_dir, test_dir, light in zip(train_json_list, val_json_list,
+                                                                             test_json_list, train_img_dir, val_img_dir,
+                                                                             test_img_dir, light_type):
 
-    best_training_loss, best_validation_loss, best_training_distance, best_validation_distance, \
-        best_training_error, best_val_error = train(model, train_loader, val_loader, args)
+        print('----------------------------  Training ' + light + ' ----------------------------')
+        args, model = params()
 
-    # Load the best model from training
-    best_model = deepcopy(model)
-    best_model.load_state_dict(torch.load(os.path.join('models', timestr + '.pth')))
+        # Put model on GPU
+        if torch.cuda.is_available():
+            model = model.cuda()
 
-    if torch.cuda.is_available():
-        best_model = best_model.cuda()
+        # Initialize the datasets and dataloader
+        train_dataset = TaillightDataset(
+            json_file=os.path.join('data-apollocar3d', 'annotations', 'separate_lights_3', train_json),
+            img_dir=os.path.join('cropped-internal-data', 'separate_lights_3', train_dir),
+            regularizer=args.regression_regularizer,
+            transform=transforms.Compose([
+                transforms.Resize((128, 128)),
+                # transforms.Normalize((127.5, 127.5, 127.5), (127.5, 127.5, 127.5))
+            ])
+        )
 
-    test_loss, test_distance, test_error = validate_model(test_loader, best_model, True)
-    stats = [best_training_loss, best_validation_loss, test_loss, best_training_distance, best_validation_distance,
-             test_distance, best_training_error, best_val_error, test_error]
+        val_dataset = TaillightDataset(
+            json_file=os.path.join('data-apollocar3d', 'annotations','separate_lights_3',  val_json),
+            img_dir=os.path.join('cropped-internal-data', 'separate_lights_3', val_dir),
+            regularizer=args.regression_regularizer,
+            transform=transforms.Compose([
+                transforms.Resize((128, 128)),
+                # transforms.Normalize((127.5, 127.5, 127.5), (127.5, 127.5, 127.5))
+            ])
+        )
 
-    save_experiment(args, stats)
+        test_dataset = TaillightDataset(
+            json_file=os.path.join('data-apollocar3d', 'annotations', 'separate_lights_3', test_json),
+            img_dir=os.path.join('cropped-internal-data', 'separate_lights_3', test_dir),
+            regularizer=args.regression_regularizer,
+            transform=transforms.Compose([
+                transforms.Resize((128, 128)),
+                # transforms.Normalize((127.5, 127.5, 127.5), (127.5, 127.5, 127.5))
+            ])
+        )
+
+        train_loader = DataLoader(train_dataset, batch_size=args.batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=args.batch_size, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=args.batch_size, shuffle=True)
+
+        best_training_loss, best_validation_loss, best_training_distance, best_validation_distance, \
+            best_training_error, best_val_error = train(model, train_loader, val_loader, args, light)
+
+        # Load the best model from training
+        best_model = deepcopy(model)
+        best_model.load_state_dict(torch.load(os.path.join('models', timestr + '_' + light + '.pth')))
+
+        if torch.cuda.is_available():
+            best_model = best_model.cuda()
+
+        test_loss, test_distance, test_error = validate_model(test_loader, best_model, True, light)
+        stats = [best_training_loss, best_validation_loss, test_loss, best_training_distance, best_validation_distance,
+                 test_distance, best_training_error, best_val_error, test_error]
+        full_statistics = [full_statistics[i] + stats[i] for i in range(len(stats))]
+
+        save_experiment(args, stats, light)
+        print('------------------------------------------------------------------')
+
+    full_statistics = [stat/4 for stat in full_statistics]
+    args, _ = params()
+    save_experiment(args, full_statistics, 'combined')

@@ -38,37 +38,38 @@ class TaillightDataset(Dataset):
 
         # Find the image for this annotation
         matching_image = cv2.imread(os.path.join(self.image_dir, (str(annotation['image_id'])) + '.jpg'))
-        matching_image = cv2.cvtColor(matching_image, cv2.COLOR_BGR2RGB)
+        # matching_image = cv2.cvtColor(matching_image, cv2.COLOR_BGR2RGB)
 
-        # matching_image_2 = cv2.cvtColor(matching_image, cv2.COLOR_BGR2HSV)
-        #
-        # # lower boundary RED color range values; Hue (0 - 10)
-        # lower1 = np.array([0, 100, 20])
-        # upper1 = np.array([10, 255, 255])
-        #
-        # # upper boundary RED color range values; Hue (160 - 180)
-        # lower2 = np.array([160, 100, 20])
-        # upper2 = np.array([179, 255, 255])
-        #
-        # # Create a mask for the red color
-        # mask1 = cv2.inRange(matching_image_2, lower1, upper1)
-        # mask2 = cv2.inRange(matching_image_2, lower2, upper2)
-        # mask = mask1 + mask2
-        #
-        # # Apply the mask to the original image
-        # new_image = cv2.bitwise_and(matching_image_2, matching_image_2, mask=mask)
-        #
-        # # Display the original image and the extracted red pixels
-        # cv2.imshow("Original Image", matching_image)
-        # cv2.imshow("Red Pixels", new_image)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
+        matching_image_2 = cv2.cvtColor(matching_image, cv2.COLOR_BGR2HSV)
+
+        # lower boundary RED color range values; Hue (0 - 10)
+        lower1 = np.array([0, 50, 50])
+        upper1 = np.array([10, 255, 255])
+
+        # upper boundary RED color range values; Hue (160 - 180)
+        lower2 = np.array([170, 50, 50])
+        upper2 = np.array([180, 255, 255])
+
+        # Create a mask for the red color
+        mask1 = cv2.inRange(matching_image_2, lower1, upper1)
+        mask2 = cv2.inRange(matching_image_2, lower2, upper2)
+        mask = mask1 + mask2
+
+        # Apply the mask to the original image
+        new_image = cv2.bitwise_and(matching_image_2, matching_image_2, mask=mask)
+
+        # Display the original image and the extracted red pixels
+        cv2.imshow("Original Image", matching_image)
+        cv2.imshow("Red Pixels", new_image)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
         keypoints = annotation['keypoints']
         center_x, center_y = keypoints[-3], keypoints[-2]
 
         # Convert padded image to tensor
-        image = torch.tensor(matching_image)
+        # image = torch.tensor(matching_image).float()
+        image = torch.tensor(matching_image).float()
         image = torch.reshape(image, (3, image.size()[0], image.size()[1]))
 
         if self.transform:

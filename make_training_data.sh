@@ -1,0 +1,4 @@
+python make_training_data_2.py --json-file keypoints_left_front_train.json --dataset train_left_front --output-json-file keypoints_vcrop_left_front_train.json
+python make_training_data_2.py --json-file keypoints_left_rear_train.json --dataset train_left_rear --output-json-file keypoints_vcrop_left_rear_train.json
+python make_training_data_2.py --json-file keypoints_right_front_train.json --dataset train_right_front --output-json-file keypoints_vcrop_right_front_train.json
+python make_training_data_2.py --json-file keypoints_right_rear_train.json --dataset train_right_rear --output-json-file keypoints_vcrop_right_rear_train.json
