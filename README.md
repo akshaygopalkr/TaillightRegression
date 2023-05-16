@@ -28,12 +28,7 @@ import torch
 from torchvision import models
 import os
 
-model = models.resnet50(pretrained=True)
-model.fc = torch.nn.Sequential(
-            torch.nn.Linear(in_features=model.fc.in_features, out_features=8),
-            torch.nn.Tanh()
-        )
-model.load_state_dict(torch.load(os.path.join('/home/cvrr/CenterNet', 'exp', 'regression_model', 'regression_model.pt')))
+model = torch.load(os.path.join('/home/cvrr/CenterNet', 'exp', 'regression_model', '(Regression model name).pt')))
 
 # We multiply by 64 since the model outputs number from -1 to 1
 output = 64*model(cropped_image)
